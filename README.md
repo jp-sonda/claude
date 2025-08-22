@@ -7,3 +7,13 @@ Controle de conteúdo via branchs do repositório no GitHub (conta pessoal), aqu
 Um comando tal como `eval "$(ssh-agent -s)" ; ssh-add ~/.ssh/id_ed25519-jp-sonda` pode ser necessário para
 atualizar o repositório no caso de usar SSH. Outra alternativa mais robusta é atualizar o arquivo `$HOME/.ssh/config`
 com suas credenciais.
+
+Em `$HOME/Library/Application Support/Claude/` você encontra os artefatos:                  
+
+```bash`
+ls ~/Library/Application\ Support/Claude/ | egrep 'Claude|config.json' 
+Claude Extensionss
+Claude Extensions Settings
+config.json
+```
+
