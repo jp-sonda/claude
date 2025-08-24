@@ -16,6 +16,7 @@ Consulte informações sobre o catalogo PostgreSQL dado um schema e as credencia
 - **Modo Interativo**: Interface de linha de comando para facilitar a exploração do banco de dados
 - **Saída Avançada**: Tabelas formatadas e bonitas usando a biblioteca avançada
 - **Desempenho Rápido**: Construído com o gerenciador de pacotes UV para Desempenho superior de `build` e `deploy`
+- **Multiplos Formatos de Saída**: _i)_ Rich formatted tables (default); _ii)_ JSON output with --json flag ; _iii)_ Save output to files with --output flag
 
 ## Clone e faça o build
 

@@ -2,6 +2,41 @@
 
 As versões descritas são disponíveis nas respectivas TAGs do git no repositório.
 
+## v0.6.0 - Agora gerando arquivos json também.
+
+O Flag --json foi adicionado para gerar arquivos `.json` com a saida neste formato para processamento
+automatizado por outras rotinas e outros sistemas.
+
+Resumo das funcionalidades implementadas na versão 0.6.0
+
+- JSONSerializableMixin implementado conforme solicitado
+
+Métodos from_json() e as_json()
+Suporte para serialização de tipos especiais (datetime)
+Usado como base para todas as classes de resultado
+
+- Estrutura completa de classes de dados
+
+CatalogResult: Classe base com informações comuns
+SchemasResult, TablesResult, DescribeResult, QueryResult, InfoResult: Classes específicas para cada comando
+TableStructure e DatabaseInfo: Classes auxiliares
+
+- Suporte ao flag --json em todos os comandos
+
+--json / -j: Ativa saída JSON
+--output / -o: Salva em arquivo
+Mantém compatibilidade com saída formatada (padrão)
+
+- Modo interativo com toggle JSON
+
+Comando json alterna entre modos
+Estado persistente durante a sessão
+Help atualizado
+
+- Testes adicionandos
+
+Testes para serialização
+
 ## v5.0.0 - Refatoração do código para melhor Manutenibilidade do Modulo.
 
 A estrutura de diretórios foi modificada adicionando 7 novos arquivos Python (catalog.py, display.py,  

@@ -38,6 +38,19 @@ class PostgreSQLCatalog:
         """
         self.connection_string = connection_string
         self.connection: Optional[psycopg2.extensions.connection] = None
+        self._database_name: Optional[str] = None
+
+    @property
+    def database_name(self) -> str:
+        """Get the current database name."""
+        if self._database_name is None and self.connection:
+            try:
+                info = self.get_database_info()
+                self._database_name = info.get('database_name', 'unknown')
+            except:
+                # Extract from connection string as fallback
+                self._database_name = self.connection_string.split('/')[-1] if '/' in self.connection_string else 'unknown'
+        return self._database_name or 'unknown'
 
     def connect(self) -> bool:
         """

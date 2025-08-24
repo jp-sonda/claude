@@ -18,6 +18,10 @@ contributing.
 - **Interactive Mode**: Command-line interface for easy database exploration
 - **Rich Output**: Beautiful, formatted tables using Rich library
 - **Fast Performance**: Built with UV package manager for optimal speed
+- **Multiple Output Formats**:
+  - Rich formatted tables (default)
+  - JSON output with --json flag
+  - Save output to files with --output flag
 
 ## Installation
 

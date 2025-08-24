@@ -2,13 +2,80 @@
 Display and formatting utilities for psql-catalog.
 """
 
-from typing import List, Dict, Any
+import json
+from typing import List, Dict, Any, Optional
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich.text import Text
+from rich.syntax import Syntax
+
+from .serialization import CatalogResult
 
 console = Console()
+
+
+def display_table(data: List[Dict[str, Any]], title: str) -> None:
+    """
+    Display data in a rich table format.
+
+    Args:
+        data: List of dictionaries containing the data to display
+        title: Title for the table
+    """
+    if not data:
+        console.print(f"[yellow]No {title.lower()} found[/yellow]")
+        return
+
+    table = Table(title=title, show_header=True, header_style="bold magenta")
+
+    # Add columns
+    if data:
+        for column in data[0].keys():
+            table.add_column(column.replace('_', ' ').title())
+
+        # Add rows
+        for row in data:
+            table.add_row(*[str(value) if value is not None else "" for value in row.values()])
+
+    console.print(table)
+
+
+def display_json(result: CatalogResult, pretty: bool = True) -> None:
+    """
+    Display a catalog result as JSON.
+
+    Args:
+        result: Catalog result to display
+        pretty: Whether to format the JSON with indentation
+    """
+    json_str = result.as_json(indent=2 if pretty else None)
+
+    if pretty:
+        # Use Rich syntax highlighting for pretty JSON
+        syntax = Syntax(json_str, "json", theme="monokai", line_numbers=False)
+        console.print(syntax)
+    else:
+        console.print(json_str)
+
+
+def display_json_raw(data: List[Dict[str, Any]], title: str = "Data") -> None:
+    """
+    Display raw data as JSON (for simple cases).
+
+    Args:
+        data: List of dictionaries to display
+        title: Title for the JSON output
+    """
+    output = {
+        "title": title,
+        "count": len(data),
+        "data": data
+    }
+
+    json_str = json.dumps(output, indent=2, default=str)
+    syntax = Syntax(json_str, "json", theme="monokai", line_numbers=False)
+    console.print(syntax)
 
 
 def display_table(data: List[Dict[str, Any]], title: str) -> None:
@@ -202,15 +269,22 @@ Available commands:
 - describe <table> [schema] [--constraints]: Describe table structure
 - query <sql>: Execute custom SQL query
 - info: Show database connection information
+- json: Toggle JSON output mode on/off
 - help: Show this help
 - quit: Exit interactive mode
 
 Options for describe:
 - --constraints or -c: Show integrity constraints (PK, FK, UNIQUE, CHECK)
 
+JSON mode:
+- Type 'json' to toggle JSON output format
+- When JSON mode is enabled, all results will be displayed as formatted JSON
+- JSON mode persists until toggled off
+
 Examples:
 - tables public
 - describe users public --constraints
-- query SELECT * FROM pg_tables LIMIT 5;"""
-
+- query SELECT * FROM pg_tables LIMIT 5;
+- json (to toggle JSON mode)
+    """
     console.print(help_text)
