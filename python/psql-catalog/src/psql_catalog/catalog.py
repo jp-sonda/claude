@@ -389,3 +389,60 @@ class PostgreSQLCatalog:
         """
         result = self.execute_query(query, (schema_name,))
         return result[0]['exists'] if result else False
+
+    def describe_all_tables(self, schema_name: str = 'public', include_constraints: bool = False) -> Dict[str, Dict[str, Any]]:
+        """
+        Describe all tables in a schema with their complete structure.
+
+        Args:
+            schema_name: Name of the schema to describe
+            include_constraints: Whether to include constraint information
+
+        Returns:
+            Dictionary with table names as keys and table information as values
+        """
+        from .exceptions import SchemaNotFoundError
+        
+        if not self.schema_exists(schema_name):
+            raise SchemaNotFoundError(f"Schema '{schema_name}' does not exist")
+
+        # Get all tables in schema
+        tables = self.list_tables(schema_name)
+        result = {}
+        failed_tables = []
+
+        for table_info in tables:
+            table_name = table_info['table_name']
+            
+            try:
+                # Get basic table structure
+                columns = self.describe_table(table_name, schema_name)
+                indexes = self.list_indexes(table_name, schema_name)
+                
+                table_data = {
+                    'columns': columns,
+                    'indexes': indexes,
+                    'constraints': None,
+                    'foreign_key_details': None
+                }
+                
+                # Add constraints if requested
+                if include_constraints:
+                    table_data['constraints'] = self.list_constraints(table_name, schema_name)
+                    table_data['foreign_key_details'] = self.get_foreign_key_details(table_name, schema_name)
+                
+                result[table_name] = table_data
+                
+            except Exception as e:
+                logger.warning(f"Failed to describe table '{schema_name}.{table_name}': {e}")
+                failed_tables.append(table_name)
+                continue
+
+        # Add failed tables info to result metadata
+        result['_metadata'] = {
+            'failed_tables': failed_tables,
+            'total_processed': len(tables),
+            'successful': len(result) - 1  # -1 for the metadata entry
+        }
+
+        return result

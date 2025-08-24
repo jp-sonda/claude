@@ -8,6 +8,7 @@ Command-line interface for exploring PostgreSQL database catalogs.
 import logging
 import sys
 from typing import Optional
+from datetime import datetime
 import typer
 
 from .catalog import PostgreSQLCatalog, DatabaseConnectionError, QueryExecutionError
@@ -18,6 +19,7 @@ from .display import (
     display_help,
     display_json,
     display_json_raw,
+    display_describe_all,
     print_success,
     print_error,
     print_warning,
@@ -28,10 +30,13 @@ from .serialization import (
     create_schemas_result,
     create_tables_result,
     create_describe_result,
+    create_describe_all_result,
     create_query_result,
     create_info_result,
     output_json,
-    save_json_to_file
+    save_json_to_file,
+    TableStructure,
+    DescribeAllResult
 )
 
 # Configure logging
@@ -83,7 +88,92 @@ def schemas(
         raise typer.Exit(1)
     except QueryExecutionError as e:
         print_error(f"Query failed: {e}")
-        raise typer.Exit(1)
+
+def _handle_describe_all_command(catalog: PostgreSQLCatalog, command: str, json_mode: bool = False) -> None:
+    """Handle the 'describe-all' command in interactive mode."""
+    parts = command.split()
+    schema_name = 'public'
+    show_constraints = False
+
+    # Parse additional parameters
+    for i, part in enumerate(parts[1:], 1):
+        if part.startswith('--'):
+            if part in ['--constraints', '-c']:
+                show_constraints = True
+        else:
+            schema_name = part
+
+    try:
+        if not catalog.schema_exists(schema_name):
+            print_error(f"Schema '{schema_name}' does not exist")
+            return
+
+        # Get all tables in schema
+        tables_list = catalog.list_tables(schema_name)
+        
+        if not tables_list:
+            print_warning(f"No tables found in schema '{schema_name}'")
+            return
+
+        # Process each table
+        tables_data = {}
+        failed_tables = []
+        
+        for table_info in tables_list:
+            table_name = table_info['table_name']
+            
+            try:
+                # Get table information
+                columns_data = catalog.describe_table(table_name, schema_name)
+                indexes_data = catalog.list_indexes(table_name, schema_name)
+                
+                constraints_data = None
+                fk_details = None
+                if show_constraints:
+                    constraints_data = catalog.list_constraints(table_name, schema_name)
+                    fk_details = catalog.get_foreign_key_details(table_name, schema_name)
+                
+                # Create table structure
+                table_structure = TableStructure(
+                    columns=columns_data,
+                    indexes=indexes_data,
+                    constraints=constraints_data,
+                    foreign_key_details=fk_details
+                )
+                
+                tables_data[table_name] = table_structure
+                
+            except Exception as e:
+                print_warning(f"Failed to describe table '{schema_name}.{table_name}': {e}")
+                failed_tables.append(table_name)
+                continue
+
+        if json_mode:
+            result = create_describe_all_result(
+                tables_data=tables_data,
+                database=catalog.database_name,
+                schema=schema_name,
+                show_constraints=show_constraints,
+                failed_tables=failed_tables
+            )
+            display_json(result)
+        else:
+            # Display in text format
+            result = DescribeAllResult(
+                command="describe-all",
+                timestamp=datetime.now(),
+                database=catalog.database_name,
+                schema=schema_name,
+                tables=tables_data,
+                show_constraints=show_constraints,
+                total_tables=len(tables_data),
+                failed_tables=failed_tables
+            )
+            
+            display_describe_all(result)
+
+    except QueryExecutionError as e:
+        print_error(f"Failed to describe schema: {e}")
 
 @app.command()
 def tables(
@@ -115,6 +205,102 @@ def tables(
                     display_json(result)
             else:
                 display_table(tables_data, f"Tables in '{schema}' Schema")
+
+    except DatabaseConnectionError as e:
+        print_error(f"Connection failed: {e}")
+        raise typer.Exit(1)
+    except QueryExecutionError as e:
+        print_error(f"Query failed: {e}")
+        raise typer.Exit(1)
+
+@app.command("describe-all")
+def describe_all(
+    schema: str = typer.Option("public", "--schema", "-s", help="Schema name"),
+    constraints: bool = typer.Option(False, "--constraints", "-c", help="Show integrity constraints"),
+    connection_string: str = typer.Option(..., "--db", "-d", help="PostgreSQL connection string"),
+    json_output: bool = typer.Option(False, "--json", "-j", help="Output results as JSON"),
+    output_file: Optional[str] = typer.Option(None, "--output", "-o", help="Save output to file")
+):
+    """Describe all tables in a schema"""
+    if not validate_connection_string(connection_string):
+        print_error("Invalid connection string format. Expected: postgresql://user:password@host:port/database")
+        raise typer.Exit(1)
+
+    try:
+        with PostgreSQLCatalog(connection_string) as catalog:
+            # Check if schema exists
+            if not catalog.schema_exists(schema):
+                print_error(f"Schema '{schema}' does not exist")
+                raise typer.Exit(1)
+
+            # Get all tables in schema
+            tables_list = catalog.list_tables(schema)
+            
+            if not tables_list:
+                print_warning(f"No tables found in schema '{schema}'")
+                return
+
+            # Process each table
+            tables_data = {}
+            failed_tables = []
+            
+            for table_info in tables_list:
+                table_name = table_info['table_name']
+                
+                try:
+                    # Get table information
+                    columns_data = catalog.describe_table(table_name, schema)
+                    indexes_data = catalog.list_indexes(table_name, schema)
+                    
+                    constraints_data = None
+                    fk_details = None
+                    if constraints:
+                        constraints_data = catalog.list_constraints(table_name, schema)
+                        fk_details = catalog.get_foreign_key_details(table_name, schema)
+                    
+                    # Create table structure
+                    table_structure = TableStructure(
+                        columns=columns_data,
+                        indexes=indexes_data,
+                        constraints=constraints_data,
+                        foreign_key_details=fk_details
+                    )
+                    
+                    tables_data[table_name] = table_structure
+                    
+                except Exception as e:
+                    print_warning(f"Failed to describe table '{schema}.{table_name}': {e}")
+                    failed_tables.append(table_name)
+                    continue
+
+            if json_output:
+                result = create_describe_all_result(
+                    tables_data=tables_data,
+                    database=catalog.database_name,
+                    schema=schema,
+                    show_constraints=constraints,
+                    failed_tables=failed_tables
+                )
+                
+                if output_file:
+                    save_json_to_file(result, output_file)
+                    print_success(f"Schema description saved to {output_file}")
+                else:
+                    display_json(result)
+            else:
+                # Display in text format
+                result = DescribeAllResult(
+                    command="describe-all",
+                    timestamp=datetime.now(),
+                    database=catalog.database_name,
+                    schema=schema,
+                    tables=tables_data,
+                    show_constraints=constraints,
+                    total_tables=len(tables_data),
+                    failed_tables=failed_tables
+                )
+                
+                display_describe_all(result)
 
     except DatabaseConnectionError as e:
         print_error(f"Connection failed: {e}")
@@ -280,6 +466,8 @@ def _interactive_loop(catalog: PostgreSQLCatalog) -> None:
                     display_table(schemas_data, "Database Schemas")
             elif command.startswith('tables'):
                 _handle_tables_command(catalog, command, json_mode)
+            elif command.startswith('describe-all'):
+                _handle_describe_all_command(catalog, command, json_mode)
             elif command.startswith('describe'):
                 _handle_describe_command(catalog, command, json_mode)
             elif command.startswith('query'):
@@ -293,27 +481,6 @@ def _interactive_loop(catalog: PostgreSQLCatalog) -> None:
 
         except Exception as e:
             print_error(f"Error: {e}")
-            command = typer.prompt("\npsql-catalog>", default="").strip()
-
-            if command.lower() in ['quit', 'exit', 'q']:
-                break
-            elif command.lower() in ['help', 'h']:
-                display_help()
-            elif command.lower() == 'info':
-                db_info = catalog.get_database_info()
-                display_database_info(db_info)
-            elif command.lower() == 'schemas':
-                schemas_data = catalog.list_schemas()
-                display_table(schemas_data, "Database Schemas")
-            elif command.startswith('tables'):
-                _handle_tables_command(catalog, command)
-            elif command.startswith('describe'):
-                _handle_describe_command(catalog, command)
-            elif command.startswith('query'):
-                _handle_query_command(catalog, command)
-            elif command:
-                print_error(f"Unknown command: {command}")
-                console.print("Type 'help' for available commands")
 
 def _handle_tables_command(catalog: PostgreSQLCatalog, command: str, json_mode: bool = False) -> None:
     """Handle the 'tables' command in interactive mode."""

@@ -113,6 +113,22 @@ class DescribeResult(CatalogResult):
 
 
 @dataclass
+class DescribeAllResult(CatalogResult):
+    """Result for describe-all command."""
+
+    tables: Dict[str, TableStructure] = field(default_factory=dict)
+    show_constraints: bool = False
+    total_tables: int = 0
+    failed_tables: List[str] = field(default_factory=list)
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.command = "describe-all"
+        if not hasattr(self, 'total_tables'):
+            self.total_tables = len(self.tables)
+
+
+@dataclass
 class QueryResult(CatalogResult):
     """Result for query command."""
 
@@ -197,6 +213,26 @@ def create_describe_result(
         table=table,
         structure=structure,
         show_constraints=show_constraints
+    )
+
+
+def create_describe_all_result(
+    tables_data: Dict[str, TableStructure],
+    database: str,
+    schema: str,
+    show_constraints: bool = False,
+    failed_tables: Optional[List[str]] = None
+) -> DescribeAllResult:
+    """Create a DescribeAllResult instance."""
+    return DescribeAllResult(
+        command="describe-all",
+        timestamp=datetime.now(),
+        database=database,
+        schema=schema,
+        tables=tables_data,
+        show_constraints=show_constraints,
+        total_tables=len(tables_data),
+        failed_tables=failed_tables or []
     )
 
 

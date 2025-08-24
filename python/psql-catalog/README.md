@@ -86,6 +86,12 @@ uv run psql-catalog describe users --schema public --db $DB_CONN
 # FOREIGN KEY, UNIQUE, CHECK)
 uv run psql-catalog describe users --schema public --constraints --db $DB_CONN
 
+# Descrever todas as tabelas de um dado Schema incluindo as informações de retrições de
+# integridadde (integrity constraints - PRIMARY KEY, FOREIGN KEY, UNIQUE, CHECK) além de
+# gerar um arquivo JSON de saida para ser usada em outro processo de automação tal comoum MCP
+# Server para geração de codigo SQL via consultas em linguagem natural.
+uv run psql-catalog describe-all --json --schema public --constraints --output my_schema.json --db $DB_CONN
+
 # Modo interativo
 uv run psql-catalog interactive
 ```

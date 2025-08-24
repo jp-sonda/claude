@@ -9,8 +9,9 @@ from rich.table import Table
 from rich.panel import Panel
 from rich.text import Text
 from rich.syntax import Syntax
+from rich.rule import Rule
 
-from .serialization import CatalogResult
+from .serialization import CatalogResult, DescribeAllResult, TableStructure
 
 console = Console()
 
@@ -76,6 +77,70 @@ def display_json_raw(data: List[Dict[str, Any]], title: str = "Data") -> None:
     json_str = json.dumps(output, indent=2, default=str)
     syntax = Syntax(json_str, "json", theme="monokai", line_numbers=False)
     console.print(syntax)
+
+
+def display_describe_all(result: DescribeAllResult) -> None:
+    """
+    Display results from describe-all command in text format.
+
+    Args:
+        result: DescribeAllResult instance containing all table information
+    """
+    schema_name = result.schema or 'public'
+    
+    # Display header
+    console.print(f"\n[bold green]Describing all tables in schema '{schema_name}'[/bold green]")
+    console.print(f"Database: [cyan]{result.database}[/cyan]")
+    console.print(f"Total tables: [cyan]{result.total_tables}[/cyan]")
+    
+    if result.failed_tables:
+        console.print(f"Failed tables: [red]{len(result.failed_tables)}[/red]")
+        for failed_table in result.failed_tables:
+            console.print(f"  [red]✗[/red] {failed_table}")
+    
+    console.print()
+    
+    # Display each table
+    for table_idx, (table_name, table_structure) in enumerate(result.tables.items(), 1):
+        # Table separator
+        if table_idx > 1:
+            console.print()
+            console.print(Rule(style="dim"))
+            console.print()
+        
+        # Table header
+        console.print(f"[bold yellow]{table_idx}. Table: {schema_name}.{table_name}[/bold yellow]")
+        
+        # Display columns
+        if table_structure.columns:
+            display_table(table_structure.columns, f"Structure of '{schema_name}.{table_name}'")
+        else:
+            console.print(f"[yellow]No column information available for '{table_name}'[/yellow]")
+        
+        # Display indexes
+        if table_structure.indexes:
+            console.print()
+            display_table(table_structure.indexes, f"Indexes for '{schema_name}.{table_name}'")
+        
+        # Display constraints if requested
+        if result.show_constraints:
+            if table_structure.constraints:
+                console.print()
+                display_constraints(
+                    table_structure.constraints, 
+                    table_structure.foreign_key_details or [], 
+                    f"Constraints for '{schema_name}.{table_name}'"
+                )
+            else:
+                console.print(f"\n[yellow]No constraints found for '{table_name}'[/yellow]")
+    
+    # Display summary
+    console.print()
+    console.print(Rule(style="green"))
+    summary_text = f"[bold green]Summary:[/bold green] Successfully described [cyan]{len(result.tables)}[/cyan] table(s)"
+    if result.failed_tables:
+        summary_text += f", [red]{len(result.failed_tables)}[/red] failed"
+    console.print(summary_text)
 
 
 def display_table(data: List[Dict[str, Any]], title: str) -> None:
@@ -267,13 +332,14 @@ Available commands:
 - schemas: List all schemas
 - tables [schema]: List tables in schema (default: public)
 - describe <table> [schema] [--constraints]: Describe table structure
+- describe-all [schema] [--constraints]: Describe all tables in schema
 - query <sql>: Execute custom SQL query
 - info: Show database connection information
 - json: Toggle JSON output mode on/off
 - help: Show this help
 - quit: Exit interactive mode
 
-Options for describe:
+Options for describe and describe-all:
 - --constraints or -c: Show integrity constraints (PK, FK, UNIQUE, CHECK)
 
 JSON mode:
@@ -284,6 +350,7 @@ JSON mode:
 Examples:
 - tables public
 - describe users public --constraints
+- describe-all public --constraints
 - query SELECT * FROM pg_tables LIMIT 5;
 - json (to toggle JSON mode)
     """
