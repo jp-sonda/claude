@@ -23,10 +23,17 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ```bash
 # Desativa o Virtual Environment atual. O comando uv sync criará automaticamente um ambiente Virtual.
 # O gerenciador de pacotes uv não precisa de activate/deactivate. Ele gerencia automaticamente nos
-# comandos uv add, av sync, uv pip install -e .
+# comandos uv add, av sync, etc.
 deactivate
 uv sync
 # Pode ser necessário usar 'uv --native-tls sync' se o uv não reconhecer a cadeia de certificados CA
+uv pip install -e .
+# Pode ser necessário usar 'uv --native-tls pip install -e .' se o uv não reconhecer a cadeia de certificados CA
+#
+# Quando o projeto é compilado e construido o script python 'psql-catalog' é criado no diretório
+# .venv/bin/ assim é util criar um alias para facilitar as chamadas ao CLI Python para visualização
+# dos objetos do catálogo do seu Schema no PostgreSQL.
+alias psql-catalog='.venv/bin/psql-catalog'
 ```
 
 ## Exemplo de uso
