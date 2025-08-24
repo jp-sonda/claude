@@ -43,6 +43,8 @@ uv sync
 
 3. Activate the virtual environment:
 
+To use your IDE you must to activa the the virtual environment
+
 ```bash
 # Linux/Mac
 source .venv/bin/activate
@@ -64,32 +66,32 @@ uv run psql-catalog --help
 ### List schemas
 
 ```bash
-psql-catalog schemas --db "postgresql://user:password@localhost:5432/database"
+uv run psql-catalog schemas --db "postgresql://user:password@localhost:5432/database"
 ```
 
 ### List tables in a schema
 
 ```bash
-psql-catalog tables --schema public --db "postgresql://user:password@localhost:5432/database"
+uv run psql-catalog tables --schema public --db "postgresql://user:password@localhost:5432/database"
 ```
 
 ### Describe a table
 
 ```bash
 # Basic table description
-psql-catalog describe users --schema public --db "postgresql://user:password@localhost:5432/database"
+uv run psql-catalog describe users --schema public --db "postgresql://user:password@localhost:5432/database"
 
 # Include integrity constraints (PRIMARY KEY, FOREIGN KEY, UNIQUE, CHECK)
-psql-catalog describe users --schema public --constraints --db "postgresql://user:password@localhost:5432/database"
+uv run psql-catalog describe users --schema public --constraints --db "postgresql://user:password@localhost:5432/database"
 
 # Short form with constraints
-psql-catalog describe users -s public -c --db "postgresql://user:password@localhost:5432/database"
+uv run psql-catalog describe users -s public -c --db "postgresql://user:password@localhost:5432/database"
 ```
 
 ### Interactive mode
 
 ```bash
-psql-catalog interactive
+uv run psql-catalog interactive
 ```
 
 ## Development

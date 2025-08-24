@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "psql-catalog"
-version = "0.4.5"
+version = "0.5.0"
 description = "A PostgreSQL catalog navigator for database schemas"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -100,4 +100,14 @@ addopts = "-v --tb=short --strict-config --strict-markers"
 markers = [
     "slow: marks tests as slow",
     "integration: marks tests as integration tests",
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+    "flake8>=7.3.0",
+    "isort>=6.0.1",
+    "mypy>=1.17.1",
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
 ]
