@@ -14,10 +14,16 @@ Instale o gerenciador de pacotes `uv` um substituto pro pip e outros utilitário
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
+# Tipicamente o uv será instalado em $HOME/.local/bin
+# O Instalador colocará uma linha no final de seu startup dda BASH ou ZSH.
+# Para não precisar reicniar a BASH, execute essa linha:
+. "HOME/.local/bin/env"
 ```
 
 ```bash
-# Desativa o Virtual Environment atual. O comando uv sync criará automaticamente um ambiente Virtual
+# Desativa o Virtual Environment atual. O comando uv sync criará automaticamente um ambiente Virtual.
+# O gerenciador de pacotes uv não precisa de activate/deactivate. Ele gerencia automaticamente nos
+# comandos uv add, av sync, uv pip install -e .
 deactivate
 uv sync
 # Pode ser necessário usar 'uv --native-tls sync' se o uv não reconhecer a cadeia de certificados CA
