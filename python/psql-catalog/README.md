@@ -38,19 +38,27 @@ alias psql-catalog='.venv/bin/psql-catalog'
 
 ## Exemplo de uso
 
-Depois de configur o modulo, você poderá usar o seu projeto assim:
+Depois de configurar o modulo, você poderá usar o seu projeto assim:
+
+Crie uma variavel no ambiente com a String de conexão ao seu Banco de Dados, como no exemplo:
+
+```bash
+export DP_PORT=5432
+export MY_DB="my_db_name"
+export DB_CONN="postgresql://my_user:my_password@my_db_host:$DP_PORT/$MY_DB"
+```
 
 ```bash
 # Listar schemas
-psql-catalog schemas --db "postgresql://user:password@localhost:5432/database"
+psql-catalog schemas --db $DB_CONN
 
 ![psql-catalog-01](docs/psql-catalog-01.png docs/)
 
 # Listar tabelas
-psql-catalog tables --schema public --db "postgresql://user:password@localhost:5432/database"
+psql-catalog tables --schema public --db $DB_CONN
 
 # Descrever uma tabela
-psql-catalog describe users --schema public --db "postgresql://user:password@localhost:5432/database"
+psql-catalog describe users --schema public --db $DB_CONN
 
 # Modo interativo
 psql-catalog interactive
@@ -61,17 +69,17 @@ psql-catalog interactive
 Com essa configuração você terá:
 
 - Velocidade: O uv é muito mais rápido que pip/pip-tools
-- Compatibilidade: Mantém a estrutura src/ que você já conhecemos de outros projetos
+- Compatibilidade: Mantém a estrutura src/ que já conhecemos de outros projetos
 - Gestão de dependências: Resolve dependências de forma mais eficiente
-- Python 3.13+: Suporte nativo para a versão mais recente
+- Python 3.12+: Suporte nativo para a versão mais recente
 - Desenvolvimento: Ferramentas de lint, formatação e testes já configuradas no pyproject.toml
 
 O projeto está pronto para você começar a desenvolver seu navegador de catálogo PostgreSQL!
 
 ## Construção do Zero
 
-As instruções abaixo foram usadas para criar o projeto e não são mais necessárias. Estão
-aqui apenas como documentação.
+As instruções abaixo foram usadas para criar o projeto e **não são mais necessárias. Estão
+aqui apenas como documentação**.
 
 Instale o gerenciador de pacotes `uv` um substituto pro pip e outros utilitários do Python.
 
