@@ -2,6 +2,21 @@
 
 Consulte informações sobre o catalogo PostgreSQL dado um schema e as credenciais de acesso.
 
+## Funcionalidades
+
+- **Navegação de Esquemas**: Liste todos os esquemas do seu banco de dados PostgreSQL
+- **Listagem de Tabelas**: Visualize o nome de todas as tabelas dentro de um esquema específicado
+- **Estrutura da Tabela**: Visualize Informações detalhadas das colunas, incluindo tipos de dados, nulidade e padrões
+- **Informações de Índice**: Visualize todos os índices das tabelas, incluindo índices de chave primária e única
+- **Restrições de Integridade**: Exiba todas as restrições de integridade, incluindo:
+- Restrições de Chave Primária
+- Restrições de Chave Estrangeira com ações referenciais (ON UPDATE/ON DELETE)
+- Restrições de Exclusividade
+- Verifique as restrições com suas condições
+- **Modo Interativo**: Interface de linha de comando para facilitar a exploração do banco de dados
+- **Saída Avançada**: Tabelas formatadas e bonitas usando a biblioteca avançada
+- **Desempenho Rápido**: Construído com o gerenciador de pacotes UV para Desempenho superior de `build` e `deploy`
+
 ## Clone e faça o build
 
 ```bash
@@ -36,6 +51,12 @@ uv pip install -e .
 alias psql-catalog='.venv/bin/psql-catalog'
 ```
 
+Com o `uv` podemos rodar a nossa CLI diretamente sem ativar manualmente o virtual environment:
+
+```bash
+uv run psql-catalog --help
+```
+
 ## Exemplo de uso
 
 Depois de configurar o modulo, você poderá usar o seu projeto assim:
@@ -50,25 +71,29 @@ export DB_CONN="postgresql://my_user:my_password@my_db_host:$DP_PORT/$MY_DB"
 
 ```bash
 # Listar schemas
-psql-catalog schemas --db $DB_CONN
+uv run psql-catalog schemas --db $DB_CONN
 
 ![psql-catalog-01](docs/psql-catalog-01.png docs/)
 
 # Listar tabelas
-psql-catalog tables --schema public --db $DB_CONN
+uv run psql-catalog tables --schema public --db $DB_CONN
 
 # Descrever uma tabela
-psql-catalog describe users --schema public --db $DB_CONN
+uv run psql-catalog describe users --schema public --db $DB_CONN
+
+# Descrever uma tabela incluindo as retrições de integridadde (integrity constraints - PRIMARY KEY,
+# FOREIGN KEY, UNIQUE, CHECK)
+uv run psql-catalog describe users --schema public --constraints --db $DB_CONN
 
 # Modo interativo
-psql-catalog interactive
+uv run psql-catalog interactive
 ```
 
 ## Por que usar o **uv** como gerenciador de pacotes Python ?
 
 Com essa configuração você terá:
 
-- Velocidade: O uv é muito mais rápido que pip/pip-tools
+- Velocidade: O gerenciador de pacotes Python `uv` é muito mais rápido que pip/pip-tools
 - Compatibilidade: Mantém a estrutura src/ que já conhecemos de outros projetos
 - Gestão de dependências: Resolve dependências de forma mais eficiente
 - Python 3.12+: Suporte nativo para a versão mais recente
@@ -100,3 +125,7 @@ uv add psycopg2-binary rich typer tabulate
 uv add --dev pytest pytest-cov black isort flake8 mypy
 uv pip install -e .
 ```
+
+## License
+
+MIT License

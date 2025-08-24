@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 """
 psql-catalog: A PostgreSQL catalog navigator for database schemas
 """
@@ -138,6 +137,85 @@ class PostgreSQLCatalog:
         """
         return self.execute_query(query, (table_name, schema_name))
 
+    def list_constraints(self, table_name: str, schema_name: str = 'public') -> List[Dict[str, Any]]:
+        """List all constraints for a table"""
+        query = """
+        SELECT
+            tc.constraint_name,
+            tc.constraint_type,
+            tc.table_name,
+            tc.table_schema,
+            kcu.column_name,
+            CASE
+                WHEN tc.constraint_type = 'FOREIGN KEY' THEN
+                    ccu.table_schema || '.' || ccu.table_name || '.' || ccu.column_name
+                ELSE NULL
+            END AS foreign_table_column,
+            CASE
+                WHEN tc.constraint_type = 'CHECK' THEN cc.check_clause
+                ELSE NULL
+            END AS check_clause,
+            tc.is_deferrable,
+            tc.initially_deferred
+        FROM
+            information_schema.table_constraints AS tc
+            JOIN information_schema.key_column_usage AS kcu
+                ON tc.constraint_name = kcu.constraint_name
+                AND tc.table_schema = kcu.table_schema
+            LEFT JOIN information_schema.constraint_column_usage AS ccu
+                ON ccu.constraint_name = tc.constraint_name
+                AND ccu.table_schema = tc.table_schema
+            LEFT JOIN information_schema.check_constraints AS cc
+                ON cc.constraint_name = tc.constraint_name
+                AND cc.constraint_schema = tc.table_schema
+        WHERE
+            tc.table_name = %s
+            AND tc.table_schema = %s
+        ORDER BY
+            CASE tc.constraint_type
+                WHEN 'PRIMARY KEY' THEN 1
+                WHEN 'FOREIGN KEY' THEN 2
+                WHEN 'UNIQUE' THEN 3
+                WHEN 'CHECK' THEN 4
+                ELSE 5
+            END,
+            tc.constraint_name,
+            kcu.ordinal_position;
+        """
+        return self.execute_query(query, (table_name, schema_name))
+
+    def get_foreign_key_details(self, table_name: str, schema_name: str = 'public') -> List[Dict[str, Any]]:
+        """Get detailed foreign key information including ON DELETE/UPDATE actions"""
+        query = """
+        SELECT
+            tc.constraint_name,
+            kcu.column_name AS column_name,
+            ccu.table_schema AS foreign_table_schema,
+            ccu.table_name AS foreign_table_name,
+            ccu.column_name AS foreign_column_name,
+            rc.update_rule AS on_update,
+            rc.delete_rule AS on_delete,
+            tc.is_deferrable,
+            tc.initially_deferred
+        FROM
+            information_schema.table_constraints AS tc
+            JOIN information_schema.key_column_usage AS kcu
+                ON tc.constraint_name = kcu.constraint_name
+                AND tc.table_schema = kcu.table_schema
+            JOIN information_schema.constraint_column_usage AS ccu
+                ON ccu.constraint_name = tc.constraint_name
+                AND ccu.table_schema = tc.table_schema
+            JOIN information_schema.referential_constraints AS rc
+                ON tc.constraint_name = rc.constraint_name
+                AND tc.table_schema = rc.constraint_schema
+        WHERE
+            tc.constraint_type = 'FOREIGN KEY'
+            AND tc.table_name = %s
+            AND tc.table_schema = %s
+        ORDER BY tc.constraint_name, kcu.ordinal_position;
+        """
+        return self.execute_query(query, (table_name, schema_name))
+
 
 def display_table(data: List[Dict[str, Any]], title: str):
     """Display data in a rich table format"""
@@ -157,6 +235,97 @@ def display_table(data: List[Dict[str, Any]], title: str):
             table.add_row(*[str(value) if value is not None else "" for value in row.values()])
 
     console.print(table)
+
+
+def display_constraints(constraints_data: List[Dict[str, Any]], fk_details: List[Dict[str, Any]], title: str):
+    """Display constraints in a formatted way"""
+    if not constraints_data:
+        console.print(f"[yellow]No {title.lower()} found[/yellow]")
+        return
+
+    # Group constraints by type
+    constraint_groups = {}
+    for constraint in constraints_data:
+        constraint_type = constraint['constraint_type']
+        if constraint_type not in constraint_groups:
+            constraint_groups[constraint_type] = []
+        constraint_groups[constraint_type].append(constraint)
+
+    # Display each type of constraint
+    for constraint_type in ['PRIMARY KEY', 'FOREIGN KEY', 'UNIQUE', 'CHECK']:
+        if constraint_type in constraint_groups:
+            console.print(f"\n[bold cyan]{constraint_type} Constraints:[/bold cyan]")
+
+            if constraint_type == 'FOREIGN KEY':
+                # Special handling for foreign keys with detailed info
+                table = Table(show_header=True, header_style="bold magenta")
+                table.add_column("Constraint Name")
+                table.add_column("Column")
+                table.add_column("References")
+                table.add_column("On Update")
+                table.add_column("On Delete")
+                table.add_column("Deferrable")
+
+                # Create a lookup for FK details
+                fk_lookup = {fk['constraint_name']: fk for fk in fk_details}
+
+                processed_fks = set()
+                for constraint in constraint_groups[constraint_type]:
+                    constraint_name = constraint['constraint_name']
+                    if constraint_name not in processed_fks:
+                        fk_detail = fk_lookup.get(constraint_name, {})
+
+                        references = ""
+                        if constraint['foreign_table_column']:
+                            references = constraint['foreign_table_column']
+                        elif fk_detail:
+                            references = f"{fk_detail.get('foreign_table_schema', '')}.{fk_detail.get('foreign_table_name', '')}.{fk_detail.get('foreign_column_name', '')}"
+
+                        table.add_row(
+                            constraint_name,
+                            constraint['column_name'] or "",
+                            references,
+                            fk_detail.get('on_update', 'N/A'),
+                            fk_detail.get('on_delete', 'N/A'),
+                            "Yes" if constraint.get('is_deferrable') == 'YES' else "No"
+                        )
+                        processed_fks.add(constraint_name)
+
+                console.print(table)
+
+            elif constraint_type == 'CHECK':
+                # Special handling for check constraints
+                table = Table(show_header=True, header_style="bold magenta")
+                table.add_column("Constraint Name")
+                table.add_column("Column")
+                table.add_column("Check Clause")
+                table.add_column("Deferrable")
+
+                for constraint in constraint_groups[constraint_type]:
+                    table.add_row(
+                        constraint['constraint_name'],
+                        constraint['column_name'] or "",
+                        constraint['check_clause'] or "",
+                        "Yes" if constraint.get('is_deferrable') == 'YES' else "No"
+                    )
+
+                console.print(table)
+
+            else:
+                # Standard handling for PRIMARY KEY and UNIQUE
+                table = Table(show_header=True, header_style="bold magenta")
+                table.add_column("Constraint Name")
+                table.add_column("Column")
+                table.add_column("Deferrable")
+
+                for constraint in constraint_groups[constraint_type]:
+                    table.add_row(
+                        constraint['constraint_name'],
+                        constraint['column_name'] or "",
+                        "Yes" if constraint.get('is_deferrable') == 'YES' else "No"
+                    )
+
+                console.print(table)
 
 
 @app.command()
@@ -186,6 +355,7 @@ def tables(
 def describe(
     table: str = typer.Argument(..., help="Table name to describe"),
     schema: str = typer.Option("public", "--schema", "-s", help="Schema name"),
+    constraints: bool = typer.Option(False, "--constraints", "-c", help="Show integrity constraints"),
     connection_string: str = typer.Option(..., "--db", "-d", help="PostgreSQL connection string")
 ):
     """Describe table structure"""
@@ -194,11 +364,18 @@ def describe(
         columns_data = catalog.describe_table(table, schema)
         display_table(columns_data, f"Structure of '{schema}.{table}'")
 
-        # Also show indexes
+        # Always show indexes
         indexes_data = catalog.list_indexes(table, schema)
         if indexes_data:
             console.print("\n")
             display_table(indexes_data, f"Indexes for '{schema}.{table}'")
+
+        # Show constraints if requested
+        if constraints:
+            console.print("\n")
+            constraints_data = catalog.list_constraints(table, schema)
+            fk_details = catalog.get_foreign_key_details(table, schema)
+            display_constraints(constraints_data, fk_details, f"Constraints for '{schema}.{table}'")
 
         catalog.disconnect()
 
@@ -226,10 +403,13 @@ def interactive():
 Available commands:
 - schemas: List all schemas
 - tables [schema]: List tables in schema (default: public)
-- describe <table> [schema]: Describe table structure
+- describe <table> [schema] [--constraints]: Describe table structure
 - query <sql>: Execute custom SQL query
 - help: Show this help
 - quit: Exit interactive mode
+
+Options for describe:
+- --constraints or -c: Show integrity constraints (PK, FK, UNIQUE, CHECK)
                 """)
             elif command.lower() == 'schemas':
                 schemas_data = catalog.list_schemas()
@@ -242,10 +422,19 @@ Available commands:
             elif command.startswith('describe'):
                 parts = command.split()
                 if len(parts) < 2:
-                    console.print("[red]Usage: describe <table> [schema][/red]")
+                    console.print("[red]Usage: describe <table> [schema] [--constraints][/red]")
                     continue
                 table_name = parts[1]
-                schema_name = parts[2] if len(parts) > 2 else 'public'
+                schema_name = 'public'
+                show_constraints = False
+
+                # Parse additional parameters
+                for i, part in enumerate(parts[2:], 2):
+                    if part.startswith('--'):
+                        if part in ['--constraints', '-c']:
+                            show_constraints = True
+                    else:
+                        schema_name = part
 
                 columns_data = catalog.describe_table(table_name, schema_name)
                 display_table(columns_data, f"Structure of '{schema_name}.{table_name}'")
@@ -254,6 +443,12 @@ Available commands:
                 if indexes_data:
                     console.print("\n")
                     display_table(indexes_data, f"Indexes for '{schema_name}.{table_name}'")
+
+                if show_constraints:
+                    console.print("\n")
+                    constraints_data = catalog.list_constraints(table_name, schema_name)
+                    fk_details = catalog.get_foreign_key_details(table_name, schema_name)
+                    display_constraints(constraints_data, fk_details, f"Constraints for '{schema_name}.{table_name}'")
             elif command.startswith('query'):
                 sql_query = command[5:].strip()  # Remove 'query' prefix
                 if sql_query:
