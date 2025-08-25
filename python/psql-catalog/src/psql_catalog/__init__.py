@@ -6,7 +6,7 @@ including schemas, tables, columns, indexes, and integrity constraints.
 Supports both rich formatted output and JSON serialization.
 """
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"
 __author__ = "Seu Nome"
 __email__ = "seu.email@exemplo.com"
 
@@ -37,6 +37,21 @@ from .exceptions import (
     InvalidConnectionStringError
 )
 from .main import main
+from .dependency_graph import (
+    TableDependencyGraph,
+    TableDependency,
+    TableNode,
+    CycleDetectionError,
+    GraphTraversalOrder,
+    analyze_schema_file,
+    get_table_insert_order,
+    get_table_drop_order,
+    print_dependency_analysis
+)
+from .batch_operations import (
+    DatabaseBatchOperations,
+    BatchOperationError
+)
 
 __all__ = [
     "PostgreSQLCatalog",
@@ -64,5 +79,18 @@ __all__ = [
     "TableNotFoundError",
     "SchemaNotFoundError",
     "InvalidConnectionStringError",
-    "main"
+    "main",
+    # Dependency analysis classes
+    "TableDependencyGraph",
+    "TableDependency",
+    "TableNode",
+    "CycleDetectionError",
+    "GraphTraversalOrder",
+    "analyze_schema_file",
+    "get_table_insert_order",
+    "get_table_drop_order",
+    "print_dependency_analysis",
+    # Batch operations classes
+    "DatabaseBatchOperations",
+    "BatchOperationError"
 ]
