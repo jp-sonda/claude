@@ -106,7 +106,7 @@ psql-catalog describe-all --json --schema public --constraints --output my_schem
 
 ### Usando no modo interativo:
 
-```
+```bash
 # Modo interativo
 uv run psql-catalog interactive
 ```
