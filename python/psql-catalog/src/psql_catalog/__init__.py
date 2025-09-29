@@ -6,13 +6,13 @@ including schemas, tables, columns, indexes, and integrity constraints.
 Supports both rich formatted output and JSON serialization.
 """
 
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __author__ = "Seu Nome"
 __email__ = "seu.email@exemplo.com"
 
-from .catalog import PostgreSQLCatalog
-from .display import display_table, display_constraints, display_database_info, display_json
-from .serialization import (
+from psql_catalog.catalog import PostgreSQLCatalog
+from psql_catalog.display import display_table, display_constraints, display_database_info, display_json
+from psql_catalog.serialization import (
     JSONSerializableMixin,
     CatalogResult,
     SchemasResult,
@@ -28,7 +28,7 @@ from .serialization import (
     output_json,
     save_json_to_file
 )
-from .exceptions import (
+from psql_catalog.exceptions import (
     PSQLCatalogError,
     DatabaseConnectionError,
     QueryExecutionError,
@@ -36,8 +36,8 @@ from .exceptions import (
     SchemaNotFoundError,
     InvalidConnectionStringError
 )
-from .main import main
-from .dependency_graph import (
+from psql_catalog.main import main
+from psql_catalog.dependency_graph import (
     TableDependencyGraph,
     TableDependency,
     TableNode,
@@ -48,7 +48,7 @@ from .dependency_graph import (
     get_table_drop_order,
     print_dependency_analysis
 )
-from .batch_operations import (
+from psql_catalog.batch_operations import (
     DatabaseBatchOperations,
     BatchOperationError
 )

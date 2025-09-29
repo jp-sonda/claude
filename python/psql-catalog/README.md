@@ -56,6 +56,8 @@ Com o `uv` podemos rodar a nossa CLI diretamente sem ativar manualmente o virtua
 
 ```bash
 uv run psql-catalog --help
+# ou
+psql-catalog --help
 ```
 
 ## Exemplo de uso
@@ -65,6 +67,7 @@ Depois de configurar o modulo, você poderá usar o seu projeto assim:
 Crie uma variavel no ambiente com a String de conexão ao seu Banco de Dados, como no exemplo:
 
 ```bash
+# Construa a variável DB_CONN com a URL de acesso ao database.
 export DP_PORT=5432
 export MY_DB="my_db_name"
 export DB_CONN="postgresql://my_user:my_password@my_db_host:$DP_PORT/$MY_DB"
@@ -73,25 +76,37 @@ export DB_CONN="postgresql://my_user:my_password@my_db_host:$DP_PORT/$MY_DB"
 ```bash
 # Listar schemas
 uv run psql-catalog schemas --db $DB_CONN
+# ou, usando o alias:
+psql-catalog schemas --db $DB_CONN
 
 ![psql-catalog-01](docs/psql-catalog-01.png docs/)
 
 # Listar tabelas
 uv run psql-catalog tables --schema public --db $DB_CONN
+# ou, usando o alias:
+psql-catalog tables --schema public --db $DB_CONN
 
 # Descrever uma tabela
-uv run psql-catalog describe users --schema public --db $DB_CONN
-
+uv run psql-catalog describe user_entity --schema public --db $DB_CONN
+# ou, usando o alias:
+psql-catalog describe user_entity --schema public --db $DB_CONN
 # Descrever uma tabela incluindo as retrições de integridadde (integrity constraints - PRIMARY KEY,
 # FOREIGN KEY, UNIQUE, CHECK)
-uv run psql-catalog describe users --schema public --constraints --db $DB_CONN
+uv run psql-catalog describe user_entity --schema public --constraints --db $DB_CONN
+# ou, usando o alias:
+psql-catalog describe user_entity --schema public --constraints --db $DB_CONN
 
 # Descrever todas as tabelas de um dado Schema incluindo as informações de retrições de
 # integridadde (integrity constraints - PRIMARY KEY, FOREIGN KEY, UNIQUE, CHECK) além de
 # gerar um arquivo JSON de saida para ser usada em outro processo de automação tal comoum MCP
 # Server para geração de codigo SQL via consultas em linguagem natural.
 uv run psql-catalog describe-all --json --schema public --constraints --output my_schema.json --db $DB_CONN
+psql-catalog describe-all --json --schema public --constraints --output my_schema.json --db $DB_CONN
+```
 
+### Usando no modo interativo:
+
+```
 # Modo interativo
 uv run psql-catalog interactive
 ```
