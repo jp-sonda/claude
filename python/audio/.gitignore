@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+
+# Whisper models cache
+~/.cache/whisper/
+
+# Arquivos de áudio grandes
+*.m4a
+*.mp3
+*.wav
+*.flac
+*.ogg
+*.aac
+*.wma
+
+# Resultados de transcrição
+*_transcricao.txt
+*.srt
+*.vtt
+*_completo.json
+
+# Exceto arquivo de exemplo (se quiser versionar)
+!data/.gitkeep
+
+data/Handover*
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
