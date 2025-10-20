@@ -24,6 +24,8 @@ dependencies = [
   "pgvector",
   "psycopg[binary]",
   "SQLAlchemy",
+  "marimo",
+  "nbformat",
 ]
 
 [project.urls]

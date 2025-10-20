@@ -17,7 +17,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).parent))
 
 # Importa as definições SQL do arquivo ddl_01.py
-from tests.ddl_01 import (
+from ddl_01 import (
     sap_pm_rag_data_table,
     generate_random_embedding_function,
     insert_simulated_data,
@@ -27,8 +27,8 @@ from tests.ddl_01 import (
 DB_CONFIG = {
     "host": "localhost",
     "port": 5434,
-    "dbname": "postgres",  # 'pm_rag'
-    "user": "postgres",
+    "dbname": "postgres",  # "pm_rag",
+    "user": "postgres",  # "postgres",
     "password": "allsecret",
 }
 
@@ -43,6 +43,29 @@ def get_sqlalchemy_connection_string():
     return f"postgresql+psycopg://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['dbname']}"
 
 
+def create_psycopg_connection():
+    """
+    Cria e retorna uma conexão psycopg com pgvector registrado
+
+    Returns:
+        psycopg.Connection: Conexão ativa com o PostgreSQL
+
+    Raises:
+        Exception: Se houver erro na conexão
+    """
+    conn_string = get_connection_string()
+    conn = None
+
+    try:
+        conn = psycopg.connect(conn_string)
+        register_vector(conn)
+        return conn
+    except Exception as e:
+        if conn:
+            conn.close()
+        raise Exception(f"Erro ao criar conexão psycopg: {e}")
+
+
 def create_table_and_function():
     """
     Passo 1: Cria a tabela sap_pm_rag_data
@@ -53,44 +76,64 @@ def create_table_and_function():
     print("ETAPA 1: CRIANDO TABELA E FUNÇÃO")
     print("=" * 80)
 
-    conn_string = get_connection_string()
+    conn = None
+    cur = None
 
     try:
-        # Conecta usando psycopg3
-        with psycopg.connect(conn_string) as conn:
-            # Registra o tipo vector do pgvector
-            register_vector(conn)
+        # Cria conexão
+        conn = create_psycopg_connection()
+        cur = conn.cursor()
 
-            with conn.cursor() as cur:
-                # Habilita a extensão pgvector
-                print("\n[1/4] Habilitando extensão pgvector...")
-                cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
-                print("✓ Extensão pgvector habilitada")
+        # Habilita a extensão pgvector
+        print("\n[1/4] Habilitando extensão pgvector...")
+        cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+        print("✓ Extensão pgvector habilitada")
 
-                # Remove tabela se existir (para permitir re-execução)
-                print("\n[2/4] Removendo tabela existente (se houver)...")
-                cur.execute("DROP TABLE IF EXISTS sap_pm_rag_data CASCADE;")
-                print("✓ Tabela anterior removida (se existia)")
+        # Remove tabela se existir (para permitir re-execução)
+        print("\n[2/4] Removendo tabela existente (se houver)...")
+        cur.execute("DROP TABLE IF EXISTS sap_pm_rag_data CASCADE;")
+        print("✓ Tabela anterior removida (se existia)")
 
-                # Passo 1: Cria a tabela
-                print("\n[3/4] Criando tabela sap_pm_rag_data...")
-                cur.execute(sap_pm_rag_data_table)
-                print("✓ Tabela criada com sucesso")
+        # Passo 1: Cria a tabela
+        print("\n[3/4] Criando tabela sap_pm_rag_data...")
+        cur.execute(sap_pm_rag_data_table)
+        print("✓ Tabela criada com sucesso")
 
-                # Passo 2: Cria a função
-                print("\n[4/4] Criando função generate_random_embedding...")
-                cur.execute(generate_random_embedding_function)
-                print("✓ Função criada com sucesso")
+        # Passo 2: Cria a função
+        print("\n[4/4] Criando função generate_random_embedding...")
+        cur.execute(generate_random_embedding_function)
+        print("✓ Função criada com sucesso")
 
-            # Commit das alterações DDL
-            conn.commit()
-            print("\n" + "=" * 80)
-            print("✓ TABELA E FUNÇÃO CRIADAS COM SUCESSO!")
-            print("=" * 80)
+        # Commit das alterações DDL
+        conn.commit()
+        print("\n" + "=" * 80)
+        print("✓ TABELA E FUNÇÃO CRIADAS COM SUCESSO!")
+        print("=" * 80)
 
     except Exception as e:
+        if conn:
+            conn.rollback()
         print(f"\n❌ ERRO ao criar tabela/função: {e}")
         raise
+
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+def create_sqlalchemy_engine():
+    try:
+        # Cria engine do SQLAlchemy usando psycopg3
+        conn_string = get_sqlalchemy_connection_string()
+        engine = create_engine(conn_string, echo=False)
+        return engine
+    except Exception as e:
+        if conn_string:
+            conn_string.close()
+    finally:
+        if conn:
+            conn.close()
 
 
 def execute_inserts():
@@ -103,7 +146,8 @@ def execute_inserts():
     print("ETAPA 2: EXECUTANDO INSERTS")
     print("=" * 80)
 
-    conn_string = get_connection_string()
+    engine = None
+    conn = None
 
     try:
         # Cria engine do SQLAlchemy usando psycopg3
@@ -114,6 +158,7 @@ def execute_inserts():
         success_count = 0
         error_count = 0
         skipped_count = 0
+        insert_count = 1
 
         print(f"\n📊 Total de comandos na lista: {total_inserts}")
         print("🔄 Iniciando inserção...\n")
@@ -121,7 +166,9 @@ def execute_inserts():
         start_time = time.time()
 
         # Passo 3: Itera sobre a lista insert_simulated_data
-        with engine.connect() as conn:
+        conn = engine.connect()
+
+        try:
             for idx, insert_sql in enumerate(insert_simulated_data, 1):
                 try:
                     # Limpa o SQL (remove espaços em branco desnecessários)
@@ -132,46 +179,67 @@ def execute_inserts():
                         skipped_count += 1
                         continue
 
+                    # Detecta se é SELECT
+                    if clean_sql.upper().startswith("SELECT"):
+                        # Executa SELECT e exibe resultado
+                        result = conn.execute(text(clean_sql))
+                        row = result.fetchone()
+                        if row:
+                            # Exibe apenas os valores, sem cabeçalho
+                            print(f"📄{' | '.join(str(v) for v in row)}")
+                        continue
+
                     # Executa o INSERT um a um
-                    conn.execute(text(clean_sql))
+                    print(f"Executando o {insert_count}º comando insert")
+                    result = conn.execute(text(clean_sql))
 
                     # Passo 4: Faz commit após cada insert
                     conn.commit()
 
                     success_count += 1
+                    insert_count += 1
 
                     # Mostra progresso a cada 5 inserts
-                    if success_count % 5 == 0:
-                        print(f"  ✓ [{success_count} inserts executados...]")
+                    #if success_count % 5 == 0:
+                    print(f"  ✓ [{success_count} inserts executados...].")
 
                 except Exception as e:
                     error_count += 1
                     print(f"\n❌ ERRO no comando {idx}:")
-                    print(f"   SQL: {clean_sql[:100]}...")
+                    print(f"Message: {str(e)}")
+                    print(f"   SQL: {clean_sql[:5000]}...")
                     print(f"   Erro: {str(e)[:150]}...")
                     # Continua executando os próximos mesmo com erro
                     continue
 
-        end_time = time.time()
-        elapsed = end_time - start_time
+            end_time = time.time()
+            elapsed = end_time - start_time
 
-        # Resumo da execução
-        print("\n" + "=" * 80)
-        print("RESULTADO DA INSERÇÃO")
-        print("=" * 80)
-        print(f"✓ Inserts bem-sucedidos: {success_count}")
-        print(f"⊘ Comandos pulados (vazios/comentários): {skipped_count}")
-        print(f"❌ Inserts com erro: {error_count}")
-        print(f"⏱️  Tempo total: {elapsed:.2f} segundos")
+            # Resumo da execução
+            print("\n" + "=" * 80)
+            print("RESULTADO DA INSERÇÃO")
+            print("=" * 80)
+            print(f"✓ Inserts bem-sucedidos: {success_count}")
+            print(f"⊘ Comandos pulados (vazios/comentários): {skipped_count}")
+            print(f"❌ Inserts com erro: {error_count}")
+            print(f"⏱️  Tempo total: {elapsed:.2f} segundos")
 
-        if success_count > 0:
-            print(f"⚡ Taxa: {success_count / elapsed:.2f} inserts/segundo")
+            if success_count > 0:
+                print(f"⚡ Taxa: {success_count / elapsed:.2f} inserts/segundo")
 
-        print("=" * 80)
+            print("=" * 80)
+
+        finally:
+            if conn:
+                conn.close()
 
     except Exception as e:
         print(f"\n❌ ERRO GERAL durante inserts: {e}")
         raise
+
+    finally:
+        if engine:
+            engine.dispose()
 
 
 def verify_data():
@@ -180,12 +248,15 @@ def verify_data():
     print("ETAPA 3: VERIFICANDO DADOS INSERIDOS")
     print("=" * 80)
 
-    conn_string = get_sqlalchemy_connection_string()
+    engine = None
+    conn = None
 
     try:
+        conn_string = get_sqlalchemy_connection_string()
         engine = create_engine(conn_string, echo=False)
+        conn = engine.connect()
 
-        with engine.connect() as conn:
+        try:
             # Conta total de registros
             result = conn.execute(text("SELECT COUNT(*) FROM sap_pm_rag_data;"))
             total_records = result.scalar()
@@ -193,12 +264,14 @@ def verify_data():
 
             # Conta por tipo de ordem
             result = conn.execute(
-                text("""
+                text(
+                    """
                 SELECT order_type, COUNT(*) as count
                 FROM sap_pm_rag_data
                 GROUP BY order_type
                 ORDER BY order_type;
-            """)
+            """
+                )
             )
             print("\n📋 Distribuição por tipo de ordem:")
             for row in result:
@@ -206,12 +279,14 @@ def verify_data():
 
             # Conta registros por chunk_id
             result = conn.execute(
-                text("""
+                text(
+                    """
                 SELECT chunk_id, COUNT(*) as count
                 FROM sap_pm_rag_data
                 GROUP BY chunk_id
                 ORDER BY chunk_id;
-            """)
+            """
+                )
             )
             print("\n📦 Distribuição por chunk:")
             for row in result:
@@ -219,13 +294,15 @@ def verify_data():
 
             # Equipamentos com mais registros
             result = conn.execute(
-                text("""
+                text(
+                    """
                 SELECT equipment_number, COUNT(*) as count
                 FROM sap_pm_rag_data
                 GROUP BY equipment_number
                 ORDER BY count DESC
                 LIMIT 10;
-            """)
+            """
+                )
             )
             print("\n🔧 Top 10 equipamentos com mais registros:")
             for row in result:
@@ -233,24 +310,28 @@ def verify_data():
 
             # Verifica dimensão dos embeddings
             result = conn.execute(
-                text("""
+                text(
+                    """
                 SELECT vector_dims(embedding) as dims
                 FROM sap_pm_rag_data
                 LIMIT 1;
-            """)
+            """
+                )
             )
             dims = result.scalar()
             print(f"\n🔢 Dimensão dos vetores de embedding: {dims}")
 
             # Mostra alguns exemplos de registros
             result = conn.execute(
-                text("""
+                text(
+                    """
                 SELECT sap_order_id, functional_location, equipment_number,
                        order_type, LEFT(maintenance_text, 100) as text_preview
                 FROM sap_pm_rag_data
                 ORDER BY id
                 LIMIT 3;
-            """)
+            """
+                )
             )
             print("\n📄 Exemplo dos primeiros 3 registros:")
             for idx, row in enumerate(result, 1):
@@ -259,13 +340,21 @@ def verify_data():
                 print(f"      Equipamento: {row[2]}")
                 print(f"      Texto: {row[4]}...")
 
-        print("\n" + "=" * 80)
-        print("✓ VERIFICAÇÃO CONCLUÍDA!")
-        print("=" * 80)
+            print("\n" + "=" * 80)
+            print("✓ VERIFICAÇÃO CONCLUÍDA!")
+            print("=" * 80)
+
+        finally:
+            if conn:
+                conn.close()
 
     except Exception as e:
         print(f"\n❌ ERRO na verificação: {e}")
         raise
+
+    finally:
+        if engine:
+            engine.dispose()
 
 
 def test_similarity_search():
@@ -274,46 +363,43 @@ def test_similarity_search():
     print("ETAPA 4: TESTANDO BUSCA DE SIMILARIDADE")
     print("=" * 80)
 
-    conn_string = get_connection_string()
+    conn = None
+    cur = None
 
     try:
-        with psycopg.connect(conn_string) as conn:
-            register_vector(conn)
+        # Cria conexão
+        conn = create_psycopg_connection()
+        cur = conn.cursor()
 
-            with conn.cursor() as cur:
-                # Gera um vetor aleatório de 512 dimensões para teste
-                print("\n🔍 Gerando vetor de busca aleatório (512 dimensões)...")
-                random_vector = np.random.rand(512).tolist()
+        # Gera um vetor aleatório de 512 dimensões para teste
+        print("\n🔍 Gerando vetor de busca aleatório (512 dimensões)...")
+        random_vector = np.random.rand(512).tolist()
 
-                # Busca os 5 registros mais similares usando distância de cosseno
-                print("🔍 Executando busca por similaridade (top 5)...\n")
+        # Busca os 5 registros mais similares usando distância de cosseno
+        print("🔍 Executando busca por similaridade (top 5)...\n")
 
-                query = """
-                    SELECT sap_order_id, equipment_number, order_type,
-                           LEFT(maintenance_text, 120) as preview,
-                           embedding <=> %s::vector as distance
-                    FROM sap_pm_rag_data
-                    ORDER BY distance
-                    LIMIT 5;
-                """
+        query = """
+            SELECT sap_order_id, equipment_number, order_type,
+                   LEFT(maintenance_text, 120) as preview,
+                   embedding <=> %s::vector as distance
+            FROM sap_pm_rag_data
+            ORDER BY distance
+            LIMIT 5;
+        """
 
-                cur.execute(query, (random_vector,))
-                results = cur.fetchall()
+        cur.execute(query, (random_vector,))
+        results = cur.fetchall()
 
-                print("📊 Resultados da busca (ordenados por similaridade):")
-                print("-" * 80)
-                for idx, (
-                    order_id,
-                    equipment,
-                    order_type,
-                    preview,
-                    distance,
-                ) in enumerate(results, 1):
-                    print(
-                        f"\n{idx}. Ordem: {order_id} | Tipo: {order_type} | Equipamento: {equipment}"
-                    )
-                    print(f"   Distância: {distance:.6f}")
-                    print(f"   Preview: {preview}...")
+        print("📊 Resultados da busca (ordenados por similaridade):")
+        print("-" * 80)
+        for idx, (order_id, equipment, order_type, preview, distance) in enumerate(
+            results, 1
+        ):
+            print(
+                f"\n{idx}. Ordem: {order_id} | Tipo: {order_type} | Equipamento: {equipment}"
+            )
+            print(f"   Distância: {distance:.6f}")
+            print(f"   Preview: {preview}...")
 
         print("\n" + "=" * 80)
         print("✓ TESTE DE SIMILARIDADE CONCLUÍDO!")
@@ -324,6 +410,13 @@ def test_similarity_search():
         import traceback
 
         traceback.print_exc()
+        raise
+
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
 
 def main():
