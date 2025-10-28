@@ -10,60 +10,20 @@ from pathlib import Path
 import time
 import psycopg
 from pgvector.psycopg import register_vector
-from sqlalchemy import create_engine, text
+from sqlalchemy import Engine, create_engine, text
 import numpy as np
+
+from pm_rag.util import create_psycopg_connection, get_sqlalchemy_connection_string
 
 # Adiciona o diretório ao path para importar o módulo ddl_01
 sys.path.insert(0, str(Path(__file__).parent))
 
 # Importa as definições SQL do arquivo ddl_01.py
-from ddl_01 import (
+from .ddl_01 import (
     sap_pm_rag_data_table,
     generate_random_embedding_function,
     insert_simulated_data,
 )
-
-# Configurações de conexão com o PostgreSQL
-DB_CONFIG = {
-    "host": "localhost",
-    "port": 5434,
-    "dbname": "postgres",  # "pm_rag",
-    "user": "postgres",  # "postgres",
-    "password": "allsecret",
-}
-
-
-def get_connection_string():
-    """Retorna a string de conexão do PostgreSQL"""
-    return f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['dbname']}"
-
-
-def get_sqlalchemy_connection_string():
-    """Retorna a string de conexão do PostgreSQL para SQLAlchemy com psycopg3"""
-    return f"postgresql+psycopg://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['dbname']}"
-
-
-def create_psycopg_connection():
-    """
-    Cria e retorna uma conexão psycopg com pgvector registrado
-
-    Returns:
-        psycopg.Connection: Conexão ativa com o PostgreSQL
-
-    Raises:
-        Exception: Se houver erro na conexão
-    """
-    conn_string = get_connection_string()
-    conn = None
-
-    try:
-        conn = psycopg.connect(conn_string)
-        register_vector(conn)
-        return conn
-    except Exception as e:
-        if conn:
-            conn.close()
-        raise Exception(f"Erro ao criar conexão psycopg: {e}")
 
 
 def create_table_and_function():
@@ -119,19 +79,6 @@ def create_table_and_function():
     finally:
         if cur:
             cur.close()
-        if conn:
-            conn.close()
-
-def create_sqlalchemy_engine():
-    try:
-        # Cria engine do SQLAlchemy usando psycopg3
-        conn_string = get_sqlalchemy_connection_string()
-        engine = create_engine(conn_string, echo=False)
-        return engine
-    except Exception as e:
-        if conn_string:
-            conn_string.close()
-    finally:
         if conn:
             conn.close()
 
@@ -200,7 +147,7 @@ def execute_inserts():
                     insert_count += 1
 
                     # Mostra progresso a cada 5 inserts
-                    #if success_count % 5 == 0:
+                    # if success_count % 5 == 0:
                     print(f"  ✓ [{success_count} inserts executados...].")
 
                 except Exception as e:
@@ -253,7 +200,7 @@ def verify_data():
 
     try:
         conn_string = get_sqlalchemy_connection_string()
-        engine = create_engine(conn_string, echo=False)
+        engine: Engine = create_engine(conn_string, echo=False)
         conn = engine.connect()
 
         try:
@@ -355,68 +302,6 @@ def verify_data():
     finally:
         if engine:
             engine.dispose()
-
-
-def test_similarity_search():
-    """Testa uma busca de similaridade usando pgvector"""
-    print("\n" + "=" * 80)
-    print("ETAPA 4: TESTANDO BUSCA DE SIMILARIDADE")
-    print("=" * 80)
-
-    conn = None
-    cur = None
-
-    try:
-        # Cria conexão
-        conn = create_psycopg_connection()
-        cur = conn.cursor()
-
-        # Gera um vetor aleatório de 512 dimensões para teste
-        print("\n🔍 Gerando vetor de busca aleatório (512 dimensões)...")
-        random_vector = np.random.rand(512).tolist()
-
-        # Busca os 5 registros mais similares usando distância de cosseno
-        print("🔍 Executando busca por similaridade (top 5)...\n")
-
-        query = """
-            SELECT sap_order_id, equipment_number, order_type,
-                   LEFT(maintenance_text, 120) as preview,
-                   embedding <=> %s::vector as distance
-            FROM sap_pm_rag_data
-            ORDER BY distance
-            LIMIT 5;
-        """
-
-        cur.execute(query, (random_vector,))
-        results = cur.fetchall()
-
-        print("📊 Resultados da busca (ordenados por similaridade):")
-        print("-" * 80)
-        for idx, (order_id, equipment, order_type, preview, distance) in enumerate(
-            results, 1
-        ):
-            print(
-                f"\n{idx}. Ordem: {order_id} | Tipo: {order_type} | Equipamento: {equipment}"
-            )
-            print(f"   Distância: {distance:.6f}")
-            print(f"   Preview: {preview}...")
-
-        print("\n" + "=" * 80)
-        print("✓ TESTE DE SIMILARIDADE CONCLUÍDO!")
-        print("=" * 80)
-
-    except Exception as e:
-        print(f"\n❌ ERRO no teste de similaridade: {e}")
-        import traceback
-
-        traceback.print_exc()
-        raise
-
-    finally:
-        if cur:
-            cur.close()
-        if conn:
-            conn.close()
 
 
 def main():

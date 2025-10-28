@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -e
+
+deactivate 2> /dev/null | true
+
+source /Users/joao/Library/Application\ Support/hatch/env/virtual/pm-rag/gZuOJOai/pm-rag/bin/activate
+
+which python3
+
+echo "Ambiente virtual configurado para o Hatch"
+
