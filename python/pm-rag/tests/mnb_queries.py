@@ -12,7 +12,33 @@ app = marimo.App(
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""Veja [Marimo]()https://realpython.com/marimo-notebook/""")
+    mo.md(r"""Veja [Marimo](https://realpython.com/marimo-notebook/)""")
+    return
+
+
+@app.cell
+def _(mo):
+    mo.md(
+        r"""
+    # PM-RAG
+
+    ## Detecção de Anomalias em Séries Temporais Multivariadas
+
+    ## Objetivo
+
+    - Ganhos de produtividade e vantagens competitivas em aplicações industriais
+    - Identificar mau funcionamento de equipamentos ou ineficiências de processo
+    - Identificar potenciais riscos de segurança
+    - Implementação de manutenção preditiva e prevenção de falhas dispendiosas
+    - Em busca da Manufatura com Zero Defeitos (ZDM) e Manufatura com Zero Desperdício (ZWM)
+
+    Os métodos tradicionais de AD, como Redes Neurais Recorrentes ou abordagens baseadas em reconstrução, geralmente apresentam dificuldades com Séries Temporais Multivariadas (MTS) caracterizadas por complexas dependências temporais e interações entre variáveis ​​Tank, [41]. Por esse motivo, os ambientes industriais precisam de ferramentas robustas que implementem AD para MTS.
+
+    Em particular, a detecção de anomalias para séries temporais multivariadas, que envolve a observação de múltiplas variáveis ​​ao longo do tempo, está se tornando um desafio de pesquisa cada vez mais crítico em aplicações industriais. Em primeiro lugar, a natureza dos processos industriais geralmente envolve lidar com anomalias nunca antes vistas, o que dificulta a utilização de métodos de aprendizado supervisionado. Além disso, a alta dimensionalidade das MTS apresenta complexidades adicionais que surgem da necessidade de análise simultânea de múltiplos recursos – e suas interações. Finalmente, o ambiente industrial geralmente apresenta problemas relacionados à qualidade dos dados – especialmente em termos de conjuntos de dados desbalanceados que contêm muita informação para processos normais e uma quantidade muito menor de informação para processos anômalos.
+
+    Para enfrentar esses desafios, várias técnicas de processamento de sinal e ML foram propostas. Embora as técnicas de incorporação Bertrand et al. [10] demonstraram potencial na representação de dados MTS em um espaço transformado. Os avanços nas Transformadas Wavelet de Meyer [30] criaram novas oportunidades para detecção de anomalias (AD) mais robusta (Rhif et al. [35]; Pacheco et al. [33]), oferecendo uma alternativa aos métodos clássicos, como as transformadas de Fourier de curto prazo, que não conseguem atingir alta resolução simultaneamente nos domínios do tempo e da frequência. Em particular, as Transformadas Wavelet Discretas (DWTs) (Mallat, [29]) fornecem uma ferramenta poderosa para analisar sinais não estacionários típicos em ambientes industriais. Essa capacidade de análise multirresolução permite uma melhor detecção de anomalias em diferentes escalas de tempo e frequências (Zhang et al. [48]; Kanarachos et al. [24]). Os autoencoders (AEs) surgiram como outra técnica poderosa para criar representações vetoriais de MTS (Ienco e Interdonato, [23]). Quando combinados com a DWT, é possível aproveitar tanto as propriedades de decomposição em escala temporal da DWT quanto as capacidades de redução de dimensionalidade dos AEs. Essa abordagem híbrida permite uma captura mais eficaz de padrões complexos e anomalias em séries temporais (TS) industriais. Juntamente com os AEs, vários algoritmos de aprendizado de máquina (ML) são comumente usados ​​para detecção de anomalias. Por exemplo, a classificação de uma única classe pode ser usada para detectar anomalias na representação vetorial do conjunto de dados criada pelo autoencoder.
+    """
+    )
     return
 
 
@@ -274,12 +300,12 @@ def _(mo):
         - LSTM Autoencoder
         \"""
         dados = buscar_dados_sensor(tag, janela_tempo)
-    
+
         # Exemplo: Detecção simples por threshold
         media = np.mean(dados['valor'])
         std = np.std(dados['valor'])
         z_score = (dados['valor'][-1] - media) / std
-    
+
         if z_score > 3:  # 3 desvios padrão
             return {
                 'anomalia': True,
@@ -287,7 +313,7 @@ def _(mo):
                 'tipo': classificar_anomalia(dados),
                 'serie_temporal': dados
             }
-    
+
         return {'anomalia': False}
 
     # Resultado da detecção
@@ -315,37 +341,37 @@ def _(mo):
         Converte a série temporal anormal em descrição textual
         \"""
         dados = anomalia['serie_temporal']
-    
+
         # Gera descrição rica em contexto
         texto = f\"""
         Análise de anomalia detectada no sensor {anomalia['tag']}:
-    
+
         Padrão observado: {anomalia['tipo']}
-    
+
         Série temporal:
         - Valor inicial: {dados['valores'][0]} mm/s RMS
         - Valor final: {dados['valores'][-1]} mm/s RMS
         - Taxa de crescimento: {dados['taxa_crescimento']} mm/s por hora
         - Duração: {len(dados['valores'])} horas
-    
+
         Características:
         - Aumento progressivo e contínuo da vibração
         - Padrão lento de deterioração
         - Sem oscilações bruscas
         - Curva de crescimento aproximadamente linear
-    
+
         Contexto do equipamento:
         - Tag: V-B25C (Sensor de vibração)
         - Equipamento: Bomba de alimentação
         - Threshold de alarme: 4.0 mm/s RMS
         - Status: ALERTA - Valor acima do threshold
-    
+
         Comportamento similar a falhas de:
         - Desalinhamento de eixo
         - Desgaste de rolamento
         - Desbalanceamento mecânico
         \"""
-    
+
         return texto.strip()
     ```
 
@@ -368,12 +394,12 @@ def _(mo):
         \"""
         # Usando OpenAI (exemplo)
         import openai
-    
+
         response = openai.Embedding.create(
             input=texto_descritivo,
             model="text-embedding-ada-002"
         )
-    
+
         return response['data'][0]['embedding']  # 512 ou 1536 dimensões
 
     # Gera o embedding
@@ -469,37 +495,37 @@ def _(mo):
         \"""
         Sistema completo de detecção e correlação de anomalias
         \"""
-    
+
         def __init__(self):
             self.detector_anomalias = DetectorAnomalias()
             self.gerador_embeddings = GeradorEmbeddings()
             self.db = PostgreSQLConnection()
-    
+
         def monitorar_e_diagnosticar(self, tag: str):
             \"""
             Pipeline completo: Monitoramento → Detecção → RAG → Diagnóstico
             \"""
             # 1. Detecta anomalia na série temporal
             anomalia = self.detector_anomalias.detectar(tag)
-        
+
             if not anomalia['anomalia']:
                 return {"status": "normal"}
-        
+
             # 2. Converte série temporal em texto descritivo
             texto_descritivo = self.serie_temporal_para_texto(anomalia)
-        
+
             # 3. Gera embedding
             query_embedding = self.gerador_embeddings.gerar(texto_descritivo)
-        
+
             # 4. Busca ordens similares
             ordens_similares = self.buscar_ordens_similares(query_embedding)
-        
+
             # 5. Envia para LLM para diagnóstico
             diagnostico = self.gerar_diagnostico_llm(
                 anomalia=anomalia,
                 ordens_similares=ordens_similares
             )
-        
+
             return {
                 "status": "anomalia_detectada",
                 "tag": tag,
@@ -508,7 +534,7 @@ def _(mo):
                 "diagnostico": diagnostico,
                 "acoes_recomendadas": diagnostico['acoes']
             }
-    
+
         def gerar_diagnostico_llm(self, anomalia, ordens_similares):
             \"""
             Usa LLM (GPT-4, Claude, etc) para gerar diagnóstico
@@ -517,26 +543,26 @@ def _(mo):
                 f"Ordem {o['sap_order_id']} - {o['equipment_number']}:\n{o['maintenance_text']}"
                 for o in ordens_similares
             ])
-        
+
             prompt = f\"""
             Você é um especialista em manutenção de usinas de energia.
-        
+
             SITUAÇÃO ATUAL:
             {self.serie_temporal_para_texto(anomalia)}
-        
+
             HISTÓRICO DE CASOS SIMILARES:
             {contexto}
-        
+
             Com base no histórico, forneça:
             1. Diagnóstico provável da causa raiz
             2. Tempo estimado até falha crítica
             3. Ações corretivas recomendadas (prioridade)
             4. Peças de reposição necessárias
             5. Janela de manutenção sugerida
-        
+
             Formato da resposta: JSON
             \"""
-        
+
             resposta = self.llm.generate(prompt)
             return json.loads(resposta)
 
@@ -653,14 +679,15 @@ def _(mo):
     └─────────────────────────────────────────────────────────────┘
     ```
 
-    **Isso é RAG com séries temporais anormais!** 🎯
+    ### **Isso é RAG com séries temporais anormais!** 🎯
     """
     )
     return
 
 
 @app.cell
-def _():
+def _(mo):
+    mo.md(r"""Veja [Referências Aqui](http://localhost:2718/?file=tests%2Fmnb_surveys.py)""")
     return
 
 

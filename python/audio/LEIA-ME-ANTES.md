@@ -35,7 +35,7 @@ chmod +x install.sh run_transcribe.sh
 
 `./run_transcribe.sh nome_arquivo_sem_a_extensão`
 
-> Ao solicitar ao **Sonnet 4.5**: "Você consegue verificar se todos os pacotes python e suas dependências transitivas funcionam no Pyton 3.13? Existe uma forma de criar um script Python para isso ?"
+> Ao solicitar ao **Sonnet 4.5**: "Você consegue verificar se todos os pacotes python e suas dependências transitivas funcionam no Python 3.13? Existe uma forma de criar um script Python para isso ?"
 
 Obtive o seguinte:
 
