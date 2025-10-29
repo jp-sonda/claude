@@ -12,6 +12,7 @@ import psycopg
 from pgvector.psycopg import register_vector
 from sqlalchemy import Engine, create_engine, text
 import numpy as np
+from pm_rag.util import exec_os_command, exec_query, test_similarity_search
 
 from pm_rag.util import create_psycopg_connection, get_sqlalchemy_connection_string
 

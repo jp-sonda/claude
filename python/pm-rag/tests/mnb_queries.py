@@ -22,7 +22,12 @@ def _(mo):
         r"""
     # PM-RAG
 
-    ## Detecção de Anomalias em Séries Temporais Multivariadas
+    ## Detecção de Anomalias (AD) em Séries Temporais Multivariadas (MTS)
+
+    #### Keywords
+
+    - AD - Anomaly Detection
+    - MTS - Multivariate Time Series
 
     ## Objetivo
 
@@ -32,11 +37,32 @@ def _(mo):
     - Implementação de manutenção preditiva e prevenção de falhas dispendiosas
     - Em busca da Manufatura com Zero Defeitos (ZDM) e Manufatura com Zero Desperdício (ZWM)
 
-    Os métodos tradicionais de AD, como Redes Neurais Recorrentes ou abordagens baseadas em reconstrução, geralmente apresentam dificuldades com Séries Temporais Multivariadas (MTS) caracterizadas por complexas dependências temporais e interações entre variáveis ​​Tank, [41]. Por esse motivo, os ambientes industriais precisam de ferramentas robustas que implementem AD para MTS.
+    Séries Temporais Multivariadas (MTS) são caracterizadas por complexas dependências temporais e interações entre variáveis. Ambientes industriais precisam de ferramentas robustas que implementem AD para MTS.
 
-    Em particular, a detecção de anomalias para séries temporais multivariadas, que envolve a observação de múltiplas variáveis ​​ao longo do tempo, está se tornando um desafio de pesquisa cada vez mais crítico em aplicações industriais. Em primeiro lugar, a natureza dos processos industriais geralmente envolve lidar com anomalias nunca antes vistas, o que dificulta a utilização de métodos de aprendizado supervisionado. Além disso, a alta dimensionalidade das MTS apresenta complexidades adicionais que surgem da necessidade de análise simultânea de múltiplos recursos – e suas interações. Finalmente, o ambiente industrial geralmente apresenta problemas relacionados à qualidade dos dados – especialmente em termos de conjuntos de dados desbalanceados que contêm muita informação para processos normais e uma quantidade muito menor de informação para processos anômalos.
+    AD para MTS é um desafio de pesquisa cada vez mais crítico em aplicações industriais. 
+    Métodos de aprendizado supervisionado são caros.
+    A alta dimensionalidade das MTS apresenta complexidades adicionais
+    Problemas relacionados à qualidade dos dados na Industria (Datasets desbalanceados com pouca informação para processos anômalos) 
 
-    Para enfrentar esses desafios, várias técnicas de processamento de sinal e ML foram propostas. Embora as técnicas de incorporação Bertrand et al. [10] demonstraram potencial na representação de dados MTS em um espaço transformado. Os avanços nas Transformadas Wavelet de Meyer [30] criaram novas oportunidades para detecção de anomalias (AD) mais robusta (Rhif et al. [35]; Pacheco et al. [33]), oferecendo uma alternativa aos métodos clássicos, como as transformadas de Fourier de curto prazo, que não conseguem atingir alta resolução simultaneamente nos domínios do tempo e da frequência. Em particular, as Transformadas Wavelet Discretas (DWTs) (Mallat, [29]) fornecem uma ferramenta poderosa para analisar sinais não estacionários típicos em ambientes industriais. Essa capacidade de análise multirresolução permite uma melhor detecção de anomalias em diferentes escalas de tempo e frequências (Zhang et al. [48]; Kanarachos et al. [24]). Os autoencoders (AEs) surgiram como outra técnica poderosa para criar representações vetoriais de MTS (Ienco e Interdonato, [23]). Quando combinados com a DWT, é possível aproveitar tanto as propriedades de decomposição em escala temporal da DWT quanto as capacidades de redução de dimensionalidade dos AEs. Essa abordagem híbrida permite uma captura mais eficaz de padrões complexos e anomalias em séries temporais (TS) industriais. Juntamente com os AEs, vários algoritmos de aprendizado de máquina (ML) são comumente usados ​​para detecção de anomalias. Por exemplo, a classificação de uma única classe pode ser usada para detectar anomalias na representação vetorial do conjunto de dados criada pelo autoencoder.
+    Para enfrentar esses desafios, várias técnicas de processamento de sinal e ML foram propostas. Embora as técnicas de incorporação (Embedding) podem representar de dados MTS em um espaço transformado existem outros modelos importantes.
+
+    Modelos:
+
+    - Transformadas Wavelet fornecem novas oportunidades para detecção de anomalias mais robusta. Transformadas Wavelet Discretas (DWTs) fornecem uma ferramenta para analisar sinais não estacionários típicos em ambientes industriais. Possuem capacidade de análise multirresolução nas escalas de tempo e frequências.
+    - Os autoencoders (AEs) são técnicas poderosas para criar representações vetoriais de MTS. Quando combinados com a DWT, é possível aproveitar tanto as propriedades de decomposição em escala temporal da DWT quanto as capacidades de redução de dimensionalidade dos AEs. Essa abordagem híbrida permite uma captura mais eficaz de padrões complexos e anomalias em séries temporais (TS) industriais.
+    - Juntamente com os AEs, vários algoritmos de aprendizado de máquina (ML) que capturam a dependência temporal são comumente usados para detecção de anomalias (GRU, LSTM, CNN unidimensional).
+    """
+    )
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(
+        r"""
+    **Diagrama de componentes**
+
+    Veja arquivo em `docs/img/pm-rag-01.svg`
     """
     )
     return
